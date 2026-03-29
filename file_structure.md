@@ -1,48 +1,18 @@
 # File Structure
 
-This document describes the current repository layout and the purpose of each major file and folder.
+This document describes the maintained repository layout and the purpose of each major file and folder. It documents the active workflow and archive files, and intentionally leaves out temporary duplicate notebooks from the published structure.
 
 ## Overview
 
-The project is organized as a notebook-first research workspace for liver disease analysis using the ILPD dataset. The repository currently separates:
+The repository is organized around:
 
-- raw dataset storage
-- legacy notebooks from earlier phases of the work
-- the active EDA notebook
-- generated report artifacts and plots
-- project metadata and restructuring notes
+- raw, interim, and processed ILPD datasets
+- active workflow notebooks in `scripts/`
+- archived notebooks in `legacy_notebooks/`
+- generated reports and figures in `produced_reports/`
+- project metadata and documentation at the repo root
 
-## Root-Level Files
-
-### `README.md`
-
-Primary project overview. It explains the research topic, objectives, dataset, and team context.
-
-### `LICENSE`
-
-Defines the license terms for the repository contents.
-
-### `NOTICE`
-
-Contains attribution or notice information associated with the project.
-
-### `.gitignore`
-
-Lists local caches, virtual environments, temporary notebook files, and generated outputs that should not be committed to version control.
-
-### `pyproject.toml`
-
-Stores project metadata and the Python dependencies needed for the notebook workflow. It also records important project paths such as the raw dataset location and the active EDA notebook path.
-
-### `restructure.md`
-
-Tracks the current restructuring direction and documents the intended notebook-first organization of the repository.
-
-### `file_structure.md`
-
-This file. It documents the current repository structure and explains the purpose of each major item.
-
-## Directory Structure
+## Maintained Structure
 
 ```text
 Spring_Internship_2026/
@@ -53,125 +23,175 @@ Spring_Internship_2026/
 ├─ pyproject.toml
 ├─ file_structure.md
 ├─ data/
+│  ├─ description.md
 │  ├─ raw/
 │  │  └─ ILPD.csv
 │  ├─ interim/
-│  │  └─ .gitkeep
+│  │  ├─ .gitkeep
+│  │  └─ ILPD_cleaned.csv
 │  └─ processed/
-│     └─ .gitkeep
+│     ├─ .gitkeep
+│     ├─ ILPD_clinically_capped.csv
+│     └─ ILPD_robust_scaled_features.csv
 ├─ legacy_notebooks/
 │  ├─ 01_data_preprocessing_and_outlier_handling.ipynb
 │  ├─ 02_noise_augmentation_by_gender.ipynb
 │  └─ 03_modeling_and_paper_notes.ipynb
 ├─ scripts/
-│  └─ eda_univariate_bivariate.ipynb
+│  ├─ 01_eda_univariate_bivariate.ipynb
+│  ├─ 02_outlier_handling.ipynb
+│  ├─ 03_preprocessing_pipeline.ipynb
+│  └─ workflow.md
 ├─ produced_reports/
 │  ├─ docs/
-│  │  └─ EDA.docx
-│  ├─ html/
-│  │  ├─ final_EDA.html
-│  │  └─ univariate_EDA.html
-│  └─ figures/
-│     └─ eda/
-│        ├─ univariate/
-│        └─ bivariate/
+│  │  ├─ ILPD_outlier_report.csv
+│  │  └─ ILPD_preprocessing_metadata.json
+│  ├─ figures/
+│  │  └─ eda/
+│  │     ├─ outliers/
+│  │     ├─ univariate/
+│  │     └─ bivariate/
+│  ├─ 01_eda_univariate_bivariate.html
+│  ├─ 02_outlier_handling.html
+│  └─ 03_preprocessing_pipeline.html
 └─ src/
    └─ .gitkeep
 ```
 
-## Folder Purposes
+## Root-Level Files
 
-### `data/`
+### `README.md`
 
-Central location for datasets used across the project.
+High-level project overview, research context, active notebook layout, and output summary.
+
+### `pyproject.toml`
+
+Defines the project dependency set and stores the current active notebook and report paths.
+
+### `file_structure.md`
+
+This file. It explains the maintained repository structure and the role of each major artifact group.
+
+### `.gitignore`
+
+Keeps local caches, environments, checkpoint folders, and generated figures from being committed unintentionally.
+
+## Data Directories
 
 ### `data/raw/`
 
-Stores the original input data in untouched form.
+Stores the untouched source dataset.
 
 ### `data/raw/ILPD.csv`
 
-The raw Indian Liver Patient Dataset used for EDA, preprocessing, augmentation, and modeling.
+The raw ILPD dataset used by the preprocessing and EDA notebooks.
 
 ### `data/interim/`
 
-Reserved for intermediate datasets created during cleaning or transformation steps. It is currently empty except for `.gitkeep`, which keeps the folder tracked in git.
+Stores datasets that are cleaned but still intermediate in the workflow.
+
+### `data/interim/ILPD_cleaned.csv`
+
+The cleaned dataset created by the preprocessing notebook and consumed by the outlier notebook.
 
 ### `data/processed/`
 
-Reserved for final processed or model-ready datasets. It is also currently a placeholder directory.
+Stores downstream processed datasets intended for analysis or modeling.
 
-### `legacy_notebooks/`
+### `data/processed/ILPD_clinically_capped.csv`
 
-Holds older or broader workflow notebooks from previous stages of the project. These notebooks are still important reference material, but they are not the newly isolated EDA notebook.
+The clinically bounded dataset generated by preprocessing.
 
-### `legacy_notebooks/01_data_preprocessing_and_outlier_handling.ipynb`
+### `data/processed/ILPD_robust_scaled_features.csv`
 
-Notebook focused on data loading, cleaning, scaling, outlier detection, and preprocessing-related EDA.
+The robust-scaled feature dataset generated by preprocessing.
 
-### `legacy_notebooks/02_noise_augmentation_by_gender.ipynb`
+### `data/description.md`
 
-Notebook for noise handling and GMM-based data augmentation, including validation and density-based filtering logic.
+Dataset-level documentation for the raw, interim, and processed ILPD artifacts.
 
-### `legacy_notebooks/03_modeling_and_paper_notes.ipynb`
-
-Notebook that combines modeling experiments, baseline classifiers, and paper or literature notes.
+## Notebook Directories
 
 ### `scripts/`
 
-Contains active, task-specific notebooks or execution assets used for focused workflows.
+Contains the active maintained notebooks.
 
-### `scripts/eda_univariate_bivariate.ipynb`
+### `scripts/01_eda_univariate_bivariate.ipynb`
 
-The dedicated EDA notebook for univariate and bivariate analysis. It reads the raw dataset and saves generated diagrams to the report figures folders.
+Runs raw-data EDA and writes the univariate and bivariate figure set.
+
+### `scripts/02_outlier_handling.ipynb`
+
+Runs numeric outlier diagnostics and produces QA reports plus KDE plots.
+
+### `scripts/03_preprocessing_pipeline.ipynb`
+
+Creates the cleaned, clinically capped, and robust-scaled datasets and writes preprocessing metadata.
+
+### `scripts/workflow.md`
+
+Describes the active notebooks, their outputs, and the dependency relationship between them.
+
+### `legacy_notebooks/`
+
+Stores earlier combined notebooks kept as archive references rather than the current maintained workflow.
+
+### `legacy_notebooks/01_data_preprocessing_and_outlier_handling.ipynb`
+
+Older combined preprocessing and outlier notebook.
+
+### `legacy_notebooks/02_noise_augmentation_by_gender.ipynb`
+
+Archive notebook for augmentation and noise-based experiments.
+
+### `legacy_notebooks/03_modeling_and_paper_notes.ipynb`
+
+Archive notebook for model training experiments and paper-linked notes.
+
+## Report Outputs
 
 ### `produced_reports/`
 
-Stores generated outputs and documentation artifacts produced from notebooks or analysis runs.
+Stores the generated artifacts from the active notebooks.
 
 ### `produced_reports/docs/`
 
-Contains document-style outputs such as Word files.
+Contains metadata and QA summary files.
 
-### `produced_reports/docs/EDA.docx`
+### `produced_reports/docs/ILPD_preprocessing_metadata.json`
 
-A document export related to the exploratory data analysis work.
+Metadata manifest describing preprocessing checks, strategies, and output paths.
 
-### `produced_reports/html/`
+### `produced_reports/docs/ILPD_outlier_report.csv`
 
-Contains HTML exports generated from notebooks or analysis reports.
+Feature-level outlier summary exported by the outlier notebook.
 
-### `produced_reports/html/final_EDA.html`
+### `produced_reports/figures/eda/outliers/`
 
-Rendered HTML version of the broader EDA workflow.
-
-### `produced_reports/html/univariate_EDA.html`
-
-Rendered HTML report focused on univariate EDA outputs.
-
-### `produced_reports/figures/`
-
-Top-level folder for generated visual assets.
-
-### `produced_reports/figures/eda/`
-
-Stores images generated by the dedicated EDA notebook.
+Contains KDE plots generated during outlier handling.
 
 ### `produced_reports/figures/eda/univariate/`
 
-Contains saved univariate plots such as categorical distributions, histograms, and boxplots.
+Contains univariate EDA plots such as distributions and boxplots.
 
 ### `produced_reports/figures/eda/bivariate/`
 
-Contains saved bivariate plots such as target comparisons, pairplots, and the correlation heatmap.
+Contains bivariate EDA plots such as target comparison plots, pairplots, and the correlation heatmap.
+
+### `produced_reports/01_eda_univariate_bivariate.html`
+
+HTML export of the EDA notebook.
+
+### `produced_reports/02_outlier_handling.html`
+
+HTML export of the outlier handling notebook.
+
+### `produced_reports/03_preprocessing_pipeline.html`
+
+HTML export of the preprocessing notebook.
+
+## Placeholder Directory
 
 ### `src/`
 
-Currently a placeholder directory. It exists for future shared helpers or extracted code if the project later needs reusable Python modules.
-
-## Working Guidance
-
-- Use `scripts/eda_univariate_bivariate.ipynb` for current univariate and bivariate EDA work.
-- Use `legacy_notebooks/` as reference notebooks for preprocessing, augmentation, and modeling workflows.
-- Save any future cleaned datasets in `data/interim/` or `data/processed/` depending on whether they are temporary or final.
-- Keep generated documents, HTML exports, and figures under `produced_reports/` so the repo root stays clean.
+Currently unused and kept only as a placeholder in case shared helper code is introduced later.

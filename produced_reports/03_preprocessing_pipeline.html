@@ -3,7 +3,7 @@
 <html lang="en">
 <head><meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>outlier_handling</title><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js"></script>
+<title>03_preprocessing_pipeline</title><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js"></script>
 <style type="text/css">
     pre { line-height: 125%; }
 td.linenos .normal { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
@@ -7510,40 +7510,46 @@ a.anchor-link {
 <!-- End of mermaid configuration --></head>
 <body class="jp-Notebook" data-jp-theme-light="true" data-jp-theme-name="JupyterLab Light">
 <main>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=076c39f7">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=a25754c7">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h1 id="Outlier-Handling-and-KDE-Analysis">Outlier Handling and KDE Analysis<a class="anchor-link" href="#Outlier-Handling-and-KDE-Analysis">¶</a></h1><p>This notebook performs outlier diagnostics separately from preprocessing, and produces outlier QA artifacts.</p>
+<h1 id="Preprocessing-Pipeline-(Production-Ready)">Preprocessing Pipeline (Production-Ready)<a class="anchor-link" href="#Preprocessing-Pipeline-(Production-Ready)">¶</a></h1><p>This notebook creates reproducible ILPD preprocessing artifacts from raw data and saves outputs under the repository <code>data/</code> directory.</p>
+<h2 id="Outputs">Outputs<a class="anchor-link" href="#Outputs">¶</a></h2><ul>
+<li><code>data/interim/ILPD_cleaned.csv</code></li>
+<li><code>data/processed/ILPD_clinically_capped.csv</code></li>
+<li><code>data/processed/ILPD_robust_scaled_features.csv</code></li>
+<li><code>produced_reports/docs/ILPD_preprocessing_metadata.json</code></li>
+</ul>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=921dc125">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=27234516">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In [1]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">import</span> <span class="nn">json</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
-<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
-<span class="kn">import</span> <span class="nn">seaborn</span> <span class="k">as</span> <span class="nn">sns</span>
+<span class="kn">from</span> <span class="nn">sklearn.preprocessing</span> <span class="kn">import</span> <span class="n">RobustScaler</span>
 </pre></div>
 </div>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=b76ad453">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=3096978f">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In [2]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">resolve_repo_root</span><span class="p">(</span><span class="n">start</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
@@ -7553,41 +7559,75 @@ a.anchor-link {
     <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="s2">"Could not locate repository root from current working directory"</span><span class="p">)</span>
 
 <span class="n">ROOT</span> <span class="o">=</span> <span class="n">resolve_repo_root</span><span class="p">(</span><span class="n">Path</span><span class="o">.</span><span class="n">cwd</span><span class="p">())</span>
-<span class="n">INPUT_PATH</span> <span class="o">=</span> <span class="n">ROOT</span> <span class="o">/</span> <span class="s2">"data"</span> <span class="o">/</span> <span class="s2">"interim"</span> <span class="o">/</span> <span class="s2">"ILPD_cleaned.csv"</span>
+<span class="n">RAW_PATH</span> <span class="o">=</span> <span class="n">ROOT</span> <span class="o">/</span> <span class="s2">"data"</span> <span class="o">/</span> <span class="s2">"raw"</span> <span class="o">/</span> <span class="s2">"ILPD.csv"</span>
+<span class="n">INTERIM_DIR</span> <span class="o">=</span> <span class="n">ROOT</span> <span class="o">/</span> <span class="s2">"data"</span> <span class="o">/</span> <span class="s2">"interim"</span>
+<span class="n">PROCESSED_DIR</span> <span class="o">=</span> <span class="n">ROOT</span> <span class="o">/</span> <span class="s2">"data"</span> <span class="o">/</span> <span class="s2">"processed"</span>
 <span class="n">REPORTS_DIR</span> <span class="o">=</span> <span class="n">ROOT</span> <span class="o">/</span> <span class="s2">"produced_reports"</span> <span class="o">/</span> <span class="s2">"docs"</span>
-<span class="n">FIGURES_DIR</span> <span class="o">=</span> <span class="n">ROOT</span> <span class="o">/</span> <span class="s2">"produced_reports"</span> <span class="o">/</span> <span class="s2">"figures"</span> <span class="o">/</span> <span class="s2">"eda"</span> <span class="o">/</span> <span class="s2">"outliers"</span>
 
-<span class="k">for</span> <span class="n">directory</span> <span class="ow">in</span> <span class="p">[</span><span class="n">REPORTS_DIR</span><span class="p">,</span> <span class="n">FIGURES_DIR</span><span class="p">]:</span>
+<span class="k">for</span> <span class="n">directory</span> <span class="ow">in</span> <span class="p">[</span><span class="n">INTERIM_DIR</span><span class="p">,</span> <span class="n">PROCESSED_DIR</span><span class="p">,</span> <span class="n">REPORTS_DIR</span><span class="p">]:</span>
     <span class="n">directory</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Input: </span><span class="si">{</span><span class="n">INPUT_PATH</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Reports: </span><span class="si">{</span><span class="n">REPORTS_DIR</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Figures: </span><span class="si">{</span><span class="n">FIGURES_DIR</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Root: </span><span class="si">{</span><span class="n">ROOT</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Raw dataset: </span><span class="si">{</span><span class="n">RAW_PATH</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Interim output dir: </span><span class="si">{</span><span class="n">INTERIM_DIR</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Processed output dir: </span><span class="si">{</span><span class="n">PROCESSED_DIR</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Reports output dir: </span><span class="si">{</span><span class="n">REPORTS_DIR</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 </div>
 </div>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=6e334b28">
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>Root: /Users/samyabrataroy/Downloads/Spring_Internship_2026
+Raw dataset: /Users/samyabrataroy/Downloads/Spring_Internship_2026/data/raw/ILPD.csv
+Interim output dir: /Users/samyabrataroy/Downloads/Spring_Internship_2026/data/interim
+Processed output dir: /Users/samyabrataroy/Downloads/Spring_Internship_2026/data/processed
+Reports output dir: /Users/samyabrataroy/Downloads/Spring_Internship_2026/produced_reports/docs
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=8c6e0243">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h2 id="1)-Load-cleaned-dataset">1) Load cleaned dataset<a class="anchor-link" href="#1)-Load-cleaned-dataset">¶</a></h2>
+<h2 id="1)-Load-and-standardize-schema">1) Load and standardize schema<a class="anchor-link" href="#1)-Load-and-standardize-schema">¶</a></h2>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=f7ab02a2">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=5de1dbdb">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In [3]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">INPUT_PATH</span><span class="p">)</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="n">COLUMN_NAMES</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">"Age"</span><span class="p">,</span>
+    <span class="s2">"Gender"</span><span class="p">,</span>
+    <span class="s2">"Total_Bilirubin"</span><span class="p">,</span>
+    <span class="s2">"Direct_Bilirubin"</span><span class="p">,</span>
+    <span class="s2">"Alkaline_Phosphotase"</span><span class="p">,</span>
+    <span class="s2">"Alamine_Aminotransferase"</span><span class="p">,</span>
+    <span class="s2">"Aspartate_Aminotransferase"</span><span class="p">,</span>
+    <span class="s2">"Total_Proteins"</span><span class="p">,</span>
+    <span class="s2">"Albumin"</span><span class="p">,</span>
+    <span class="s2">"Albumin_and_Globulin_Ratio"</span><span class="p">,</span>
+    <span class="s2">"Result"</span><span class="p">,</span>
+<span class="p">]</span>
+
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">RAW_PATH</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">names</span><span class="o">=</span><span class="n">COLUMN_NAMES</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
 <span class="n">df</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
 </pre></div>
@@ -7595,141 +7635,634 @@ a.anchor-link {
 </div>
 </div>
 </div>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=21c58e2a">
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>(583, 11)
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child jp-OutputArea-executeResult">
+<div class="jp-OutputPrompt jp-OutputArea-prompt">Out[3]:</div>
+<div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/html" tabindex="0">
+<div>
+<style scoped="">
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+<thead>
+<tr style="text-align: right;">
+<th></th>
+<th>Age</th>
+<th>Gender</th>
+<th>Total_Bilirubin</th>
+<th>Direct_Bilirubin</th>
+<th>Alkaline_Phosphotase</th>
+<th>Alamine_Aminotransferase</th>
+<th>Aspartate_Aminotransferase</th>
+<th>Total_Proteins</th>
+<th>Albumin</th>
+<th>Albumin_and_Globulin_Ratio</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th>0</th>
+<td>65</td>
+<td>Female</td>
+<td>0.7</td>
+<td>0.1</td>
+<td>187</td>
+<td>16</td>
+<td>18</td>
+<td>6.8</td>
+<td>3.3</td>
+<td>0.90</td>
+<td>1</td>
+</tr>
+<tr>
+<th>1</th>
+<td>62</td>
+<td>Male</td>
+<td>10.9</td>
+<td>5.5</td>
+<td>699</td>
+<td>64</td>
+<td>100</td>
+<td>7.5</td>
+<td>3.2</td>
+<td>0.74</td>
+<td>1</td>
+</tr>
+<tr>
+<th>2</th>
+<td>62</td>
+<td>Male</td>
+<td>7.3</td>
+<td>4.1</td>
+<td>490</td>
+<td>60</td>
+<td>68</td>
+<td>7.0</td>
+<td>3.3</td>
+<td>0.89</td>
+<td>1</td>
+</tr>
+<tr>
+<th>3</th>
+<td>58</td>
+<td>Male</td>
+<td>1.0</td>
+<td>0.4</td>
+<td>182</td>
+<td>14</td>
+<td>20</td>
+<td>6.8</td>
+<td>3.4</td>
+<td>1.00</td>
+<td>1</td>
+</tr>
+<tr>
+<th>4</th>
+<td>72</td>
+<td>Male</td>
+<td>3.9</td>
+<td>2.0</td>
+<td>195</td>
+<td>27</td>
+<td>59</td>
+<td>7.3</td>
+<td>2.4</td>
+<td>0.40</td>
+<td>1</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=5d71b50e">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h2 id="2)-Outlier-detection-report-(IQR,-Z-score,-Modified-Z-score)">2) Outlier detection report (IQR, Z-score, Modified Z-score)<a class="anchor-link" href="#2)-Outlier-detection-report-(IQR,-Z-score,-Modified-Z-score)">¶</a></h2>
+<h2 id="2)-Missing/invalid/infinite-checks-+-duplicate-removal-+-gender-encoding">2) Missing/invalid/infinite checks + duplicate removal + gender encoding<a class="anchor-link" href="#2)-Missing/invalid/infinite-checks-+-duplicate-removal-+-gender-encoding">¶</a></h2><p>This step performs data quality checks first, encodes <code>Gender</code>, and removes duplicate rows before missing-value treatment.</p>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=61792e7c">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=450cc3fb">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In [4]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="n">num_cols</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">select_dtypes</span><span class="p">(</span><span class="n">include</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">number</span><span class="p">)</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">drop</span><span class="p">([</span><span class="s2">"Result"</span><span class="p">,</span> <span class="s2">"Gender"</span><span class="p">],</span> <span class="n">errors</span><span class="o">=</span><span class="s2">"ignore"</span><span class="p">)</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="n">missing_before</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">isnull</span><span class="p">()</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
 
-<span class="n">report_rows</span> <span class="o">=</span> <span class="p">[]</span>
-<span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">num_cols</span><span class="p">:</span>
-    <span class="n">series</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span>
+<span class="c1"># Invalid/infinite checks BEFORE missing-value treatment</span>
+<span class="n">invalid_checks</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"Age_negative"</span><span class="p">:</span> <span class="nb">int</span><span class="p">((</span><span class="n">df</span><span class="p">[</span><span class="s2">"Age"</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()),</span>
+    <span class="s2">"Age_too_high"</span><span class="p">:</span> <span class="nb">int</span><span class="p">((</span><span class="n">df</span><span class="p">[</span><span class="s2">"Age"</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">120</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()),</span>
+    <span class="s2">"Bilirubin_negative"</span><span class="p">:</span> <span class="nb">int</span><span class="p">((</span><span class="n">df</span><span class="p">[</span><span class="s2">"Total_Bilirubin"</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()),</span>
+    <span class="s2">"Proteins_negative"</span><span class="p">:</span> <span class="nb">int</span><span class="p">((</span><span class="n">df</span><span class="p">[</span><span class="s2">"Total_Proteins"</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()),</span>
+    <span class="s2">"Albumin_negative"</span><span class="p">:</span> <span class="nb">int</span><span class="p">((</span><span class="n">df</span><span class="p">[</span><span class="s2">"Albumin"</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()),</span>
+    <span class="s2">"AG_ratio_negative"</span><span class="p">:</span> <span class="nb">int</span><span class="p">((</span><span class="n">df</span><span class="p">[</span><span class="s2">"Albumin_and_Globulin_Ratio"</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()),</span>
+    <span class="s2">"Infinite_numeric_values"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isinf</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">select_dtypes</span><span class="p">(</span><span class="n">include</span><span class="o">=</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">number</span><span class="p">]))</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="o">.</span><span class="n">sum</span><span class="p">()),</span>
+<span class="p">}</span>
 
-    <span class="c1"># IQR method</span>
-    <span class="n">q1</span> <span class="o">=</span> <span class="n">series</span><span class="o">.</span><span class="n">quantile</span><span class="p">(</span><span class="mf">0.25</span><span class="p">)</span>
-    <span class="n">q3</span> <span class="o">=</span> <span class="n">series</span><span class="o">.</span><span class="n">quantile</span><span class="p">(</span><span class="mf">0.75</span><span class="p">)</span>
-    <span class="n">iqr</span> <span class="o">=</span> <span class="n">q3</span> <span class="o">-</span> <span class="n">q1</span>
-    <span class="n">iqr_lower</span> <span class="o">=</span> <span class="n">q1</span> <span class="o">-</span> <span class="mf">1.5</span> <span class="o">*</span> <span class="n">iqr</span>
-    <span class="n">iqr_upper</span> <span class="o">=</span> <span class="n">q3</span> <span class="o">+</span> <span class="mf">1.5</span> <span class="o">*</span> <span class="n">iqr</span>
-    <span class="n">iqr_outliers</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(((</span><span class="n">series</span> <span class="o">&lt;</span> <span class="n">iqr_lower</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="n">series</span> <span class="o">&gt;</span> <span class="n">iqr_upper</span><span class="p">))</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
+<span class="c1"># Encode categorical column for modeling compatibility</span>
+<span class="n">df</span><span class="p">[</span><span class="s2">"Gender"</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">"Gender"</span><span class="p">]</span><span class="o">.</span><span class="n">map</span><span class="p">({</span><span class="s2">"Male"</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">"Female"</span><span class="p">:</span> <span class="mi">1</span><span class="p">})</span>
 
-    <span class="c1"># Z-score method</span>
-    <span class="n">std</span> <span class="o">=</span> <span class="n">series</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">ddof</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-    <span class="n">mean</span> <span class="o">=</span> <span class="n">series</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
-    <span class="k">if</span> <span class="n">std</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="n">z_outliers</span> <span class="o">=</span> <span class="mi">0</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">z</span> <span class="o">=</span> <span class="p">((</span><span class="n">series</span> <span class="o">-</span> <span class="n">mean</span><span class="p">)</span> <span class="o">/</span> <span class="n">std</span><span class="p">)</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span>
-        <span class="n">z_outliers</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">z</span> <span class="o">&gt;</span> <span class="mi">3</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
+<span class="c1"># Remove exact duplicates</span>
+<span class="n">duplicates_removed</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">duplicated</span><span class="p">()</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">()</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-    <span class="c1"># Modified Z-score method</span>
-    <span class="n">median</span> <span class="o">=</span> <span class="n">series</span><span class="o">.</span><span class="n">median</span><span class="p">()</span>
-    <span class="n">mad</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">series</span> <span class="o">-</span> <span class="n">median</span><span class="p">))</span>
-    <span class="k">if</span> <span class="n">mad</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="n">mz_outliers</span> <span class="o">=</span> <span class="mi">0</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">modified_z</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.6745</span> <span class="o">*</span> <span class="p">(</span><span class="n">series</span> <span class="o">-</span> <span class="n">median</span><span class="p">)</span> <span class="o">/</span> <span class="n">mad</span><span class="p">)</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span>
-        <span class="n">mz_outliers</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">modified_z</span> <span class="o">&gt;</span> <span class="mf">3.5</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
-
-    <span class="n">report_rows</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
-        <span class="s2">"feature"</span><span class="p">:</span> <span class="n">col</span><span class="p">,</span>
-        <span class="s2">"rows"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">)),</span>
-        <span class="s2">"iqr_outliers"</span><span class="p">:</span> <span class="n">iqr_outliers</span><span class="p">,</span>
-        <span class="s2">"iqr_pct"</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="mi">100</span> <span class="o">*</span> <span class="n">iqr_outliers</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">),</span> <span class="mi">2</span><span class="p">),</span>
-        <span class="s2">"zscore_outliers"</span><span class="p">:</span> <span class="n">z_outliers</span><span class="p">,</span>
-        <span class="s2">"zscore_pct"</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="mi">100</span> <span class="o">*</span> <span class="n">z_outliers</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">),</span> <span class="mi">2</span><span class="p">),</span>
-        <span class="s2">"modified_z_outliers"</span><span class="p">:</span> <span class="n">mz_outliers</span><span class="p">,</span>
-        <span class="s2">"modified_z_pct"</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="mi">100</span> <span class="o">*</span> <span class="n">mz_outliers</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">),</span> <span class="mi">2</span><span class="p">),</span>
-    <span class="p">})</span>
-
-<span class="n">outlier_report</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">report_rows</span><span class="p">)</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s2">"iqr_pct"</span><span class="p">,</span> <span class="n">ascending</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-<span class="n">outlier_report</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Missing (before):"</span><span class="p">,</span> <span class="n">missing_before</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Invalid checks:"</span><span class="p">,</span> <span class="n">invalid_checks</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Duplicates removed:"</span><span class="p">,</span> <span class="n">duplicates_removed</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Shape after dedup:"</span><span class="p">,</span> <span class="n">df</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 </div>
 </div>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=cab12dc2">
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>Missing (before): {'Age': 0, 'Gender': 0, 'Total_Bilirubin': 0, 'Direct_Bilirubin': 0, 'Alkaline_Phosphotase': 0, 'Alamine_Aminotransferase': 0, 'Aspartate_Aminotransferase': 0, 'Total_Proteins': 0, 'Albumin': 0, 'Albumin_and_Globulin_Ratio': 4, 'Result': 0}
+Invalid checks: {'Age_negative': 0, 'Age_too_high': 0, 'Bilirubin_negative': 0, 'Proteins_negative': 0, 'Albumin_negative': 0, 'AG_ratio_negative': 0, 'Infinite_numeric_values': 0}
+Duplicates removed: 13
+Shape after dedup: (570, 11)
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=0e13db3e">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h2 id="3)-Kernel-Density-Estimation-(KDE)-visuals">3) Kernel Density Estimation (KDE) visuals<a class="anchor-link" href="#3)-Kernel-Density-Estimation-(KDE)-visuals">¶</a></h2>
+<h2 id="3)-Missing-value-treatment-with-group-wise-median">3) Missing value treatment with group-wise median<a class="anchor-link" href="#3)-Missing-value-treatment-with-group-wise-median">¶</a></h2><p>Single selected strategy for <code>Albumin_and_Globulin_Ratio</code>:</p>
+<ul>
+<li>group-wise median by <code>Gender</code></li>
+<li>global median fallback</li>
+</ul>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=f05bd568">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=84af3eb3">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In [5]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">num_cols</span><span class="p">:</span>
-    <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
-    <span class="n">sns</span><span class="o">.</span><span class="n">kdeplot</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">df</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="n">col</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="sa">f</span><span class="s2">"KDE - </span><span class="si">{</span><span class="n">col</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="n">col</span><span class="p">)</span>
-    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">"Density"</span><span class="p">)</span>
-    <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
-    <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">FIGURES_DIR</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"kde_</span><span class="si">{</span><span class="n">col</span><span class="si">}</span><span class="s2">.png"</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">150</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s2">"tight"</span><span class="p">)</span>
-    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
-    <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="n">impute_col</span> <span class="o">=</span> <span class="s2">"Albumin_and_Globulin_Ratio"</span>
+<span class="n">imputation_strategy</span> <span class="o">=</span> <span class="s2">"group_median_by_gender_with_global_fallback"</span>
+
+<span class="n">global_median</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">impute_col</span><span class="p">]</span><span class="o">.</span><span class="n">median</span><span class="p">()</span>
+<span class="n">df</span><span class="p">[</span><span class="n">impute_col</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"Gender"</span><span class="p">)[</span><span class="n">impute_col</span><span class="p">]</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="k">lambda</span> <span class="n">s</span><span class="p">:</span> <span class="n">s</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">median</span><span class="p">()))</span>
+<span class="n">df</span><span class="p">[</span><span class="n">impute_col</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">impute_col</span><span class="p">]</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="n">global_median</span><span class="p">)</span>
+
+<span class="n">missing_after</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">isnull</span><span class="p">()</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Imputation strategy:"</span><span class="p">,</span> <span class="n">imputation_strategy</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Missing (after):"</span><span class="p">,</span> <span class="n">missing_after</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Shape after imputation:"</span><span class="p">,</span> <span class="n">df</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 </div>
 </div>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=c7f338ab">
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>Imputation strategy: group_median_by_gender_with_global_fallback
+Missing (after): {'Age': 0, 'Gender': 0, 'Total_Bilirubin': 0, 'Direct_Bilirubin': 0, 'Alkaline_Phosphotase': 0, 'Alamine_Aminotransferase': 0, 'Aspartate_Aminotransferase': 0, 'Total_Proteins': 0, 'Albumin': 0, 'Albumin_and_Globulin_Ratio': 0, 'Result': 0}
+Shape after imputation: (570, 11)
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=fde316b7">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h2 id="4)-Persist-outlier-artifacts">4) Persist outlier artifacts<a class="anchor-link" href="#4)-Persist-outlier-artifacts">¶</a></h2>
+<h2 id="4)-Clinically-bounded-capping-(winsorization-style)">4) Clinically bounded capping (winsorization-style)<a class="anchor-link" href="#4)-Clinically-bounded-capping-(winsorization-style)">¶</a></h2><p>Caps only biologically implausible extremes while preserving records.</p>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=c3ab7ebc">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=69f751e7">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In [6]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="n">outlier_report_path</span> <span class="o">=</span> <span class="n">REPORTS_DIR</span> <span class="o">/</span> <span class="s2">"ILPD_outlier_report.csv"</span>
-<span class="n">outlier_report</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">outlier_report_path</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="n">clinical_limits</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"Age"</span><span class="p">:</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">100</span><span class="p">),</span>
+    <span class="s2">"Total_Bilirubin"</span><span class="p">:</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">50</span><span class="p">),</span>
+    <span class="s2">"Direct_Bilirubin"</span><span class="p">:</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">30</span><span class="p">),</span>
+    <span class="s2">"Alkaline_Phosphotase"</span><span class="p">:</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2000</span><span class="p">),</span>
+    <span class="s2">"Alamine_Aminotransferase"</span><span class="p">:</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">5000</span><span class="p">),</span>
+    <span class="s2">"Aspartate_Aminotransferase"</span><span class="p">:</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">10000</span><span class="p">),</span>
+    <span class="s2">"Total_Proteins"</span><span class="p">:</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">15</span><span class="p">),</span>
+    <span class="s2">"Albumin"</span><span class="p">:</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">6.0</span><span class="p">),</span>
+    <span class="s2">"Albumin_and_Globulin_Ratio"</span><span class="p">:</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">),</span>
+<span class="p">}</span>
+
+<span class="n">capped_df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">col</span><span class="p">,</span> <span class="p">(</span><span class="n">min_val</span><span class="p">,</span> <span class="n">max_val</span><span class="p">)</span> <span class="ow">in</span> <span class="n">clinical_limits</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="k">if</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">capped_df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="n">capped_df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">capped_df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">lower</span><span class="o">=</span><span class="n">min_val</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="n">max_val</span><span class="p">)</span>
+
+<span class="n">capped_df</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child jp-OutputArea-executeResult">
+<div class="jp-OutputPrompt jp-OutputArea-prompt">Out[6]:</div>
+<div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/html" tabindex="0">
+<div>
+<style scoped="">
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+<thead>
+<tr style="text-align: right;">
+<th></th>
+<th>Age</th>
+<th>Gender</th>
+<th>Total_Bilirubin</th>
+<th>Direct_Bilirubin</th>
+<th>Alkaline_Phosphotase</th>
+<th>Alamine_Aminotransferase</th>
+<th>Aspartate_Aminotransferase</th>
+<th>Total_Proteins</th>
+<th>Albumin</th>
+<th>Albumin_and_Globulin_Ratio</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th>0</th>
+<td>65</td>
+<td>1</td>
+<td>0.7</td>
+<td>0.1</td>
+<td>187</td>
+<td>16</td>
+<td>18</td>
+<td>6.8</td>
+<td>3.3</td>
+<td>0.90</td>
+<td>1</td>
+</tr>
+<tr>
+<th>1</th>
+<td>62</td>
+<td>0</td>
+<td>10.9</td>
+<td>5.5</td>
+<td>699</td>
+<td>64</td>
+<td>100</td>
+<td>7.5</td>
+<td>3.2</td>
+<td>0.74</td>
+<td>1</td>
+</tr>
+<tr>
+<th>2</th>
+<td>62</td>
+<td>0</td>
+<td>7.3</td>
+<td>4.1</td>
+<td>490</td>
+<td>60</td>
+<td>68</td>
+<td>7.0</td>
+<td>3.3</td>
+<td>0.89</td>
+<td>1</td>
+</tr>
+<tr>
+<th>3</th>
+<td>58</td>
+<td>0</td>
+<td>1.0</td>
+<td>0.4</td>
+<td>182</td>
+<td>14</td>
+<td>20</td>
+<td>6.8</td>
+<td>3.4</td>
+<td>1.00</td>
+<td>1</td>
+</tr>
+<tr>
+<th>4</th>
+<td>72</td>
+<td>0</td>
+<td>3.9</td>
+<td>2.0</td>
+<td>195</td>
+<td>27</td>
+<td>59</td>
+<td>7.3</td>
+<td>2.4</td>
+<td>0.40</td>
+<td>1</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=d003614f">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<h2 id="5)-Robust-scaled-feature-dataset-(for-modeling-convenience)">5) Robust-scaled feature dataset (for modeling convenience)<a class="anchor-link" href="#5)-Robust-scaled-feature-dataset-(for-modeling-convenience)">¶</a></h2><p><code>Result</code> is retained separately and not scaled.</p>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=9f4fa28f">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [7]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="cm-editor cm-s-jupyter">
+<div class="highlight hl-ipython3"><pre><span></span><span class="n">feature_cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">capped_df</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="n">c</span> <span class="o">!=</span> <span class="s2">"Result"</span><span class="p">]</span>
+
+<span class="n">scaler</span> <span class="o">=</span> <span class="n">RobustScaler</span><span class="p">()</span>
+<span class="n">scaled_features</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+    <span class="n">scaler</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">capped_df</span><span class="p">[</span><span class="n">feature_cols</span><span class="p">]),</span>
+    <span class="n">columns</span><span class="o">=</span><span class="n">feature_cols</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">scaled_with_target</span> <span class="o">=</span> <span class="n">scaled_features</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="n">scaled_with_target</span><span class="p">[</span><span class="s2">"Result"</span><span class="p">]</span> <span class="o">=</span> <span class="n">capped_df</span><span class="p">[</span><span class="s2">"Result"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+
+<span class="n">scaled_with_target</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child jp-OutputArea-executeResult">
+<div class="jp-OutputPrompt jp-OutputArea-prompt">Out[7]:</div>
+<div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/html" tabindex="0">
+<div>
+<style scoped="">
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+<thead>
+<tr style="text-align: right;">
+<th></th>
+<th>Age</th>
+<th>Gender</th>
+<th>Total_Bilirubin</th>
+<th>Direct_Bilirubin</th>
+<th>Alkaline_Phosphotase</th>
+<th>Alamine_Aminotransferase</th>
+<th>Aspartate_Aminotransferase</th>
+<th>Total_Proteins</th>
+<th>Albumin</th>
+<th>Albumin_and_Globulin_Ratio</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th>0</th>
+<td>0.80</td>
+<td>1.0</td>
+<td>-0.166667</td>
+<td>-0.181818</td>
+<td>-0.172131</td>
+<td>-0.513514</td>
+<td>-0.372470</td>
+<td>0.142857</td>
+<td>0.166667</td>
+<td>-0.125</td>
+<td>1</td>
+</tr>
+<tr>
+<th>1</th>
+<td>0.68</td>
+<td>0.0</td>
+<td>5.500000</td>
+<td>4.727273</td>
+<td>4.024590</td>
+<td>0.783784</td>
+<td>0.955466</td>
+<td>0.642857</td>
+<td>0.083333</td>
+<td>-0.525</td>
+<td>1</td>
+</tr>
+<tr>
+<th>2</th>
+<td>0.68</td>
+<td>0.0</td>
+<td>3.500000</td>
+<td>3.454545</td>
+<td>2.311475</td>
+<td>0.675676</td>
+<td>0.437247</td>
+<td>0.285714</td>
+<td>0.166667</td>
+<td>-0.150</td>
+<td>1</td>
+</tr>
+<tr>
+<th>3</th>
+<td>0.52</td>
+<td>0.0</td>
+<td>0.000000</td>
+<td>0.090909</td>
+<td>-0.213115</td>
+<td>-0.567568</td>
+<td>-0.340081</td>
+<td>0.142857</td>
+<td>0.250000</td>
+<td>0.125</td>
+<td>1</td>
+</tr>
+<tr>
+<th>4</th>
+<td>1.08</td>
+<td>0.0</td>
+<td>1.611111</td>
+<td>1.545455</td>
+<td>-0.106557</td>
+<td>-0.216216</td>
+<td>0.291498</td>
+<td>0.500000</td>
+<td>-0.583333</td>
+<td>-1.375</td>
+<td>1</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=807504c5">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<h2 id="6)-Persist-pipeline-artifacts-to-data/">6) Persist pipeline artifacts to <code>data/</code><a class="anchor-link" href="#6)-Persist-pipeline-artifacts-to-data/">¶</a></h2>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=7a49060a">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [8]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="cm-editor cm-s-jupyter">
+<div class="highlight hl-ipython3"><pre><span></span><span class="n">clean_path</span> <span class="o">=</span> <span class="n">INTERIM_DIR</span> <span class="o">/</span> <span class="s2">"ILPD_cleaned.csv"</span>
+<span class="n">capped_path</span> <span class="o">=</span> <span class="n">PROCESSED_DIR</span> <span class="o">/</span> <span class="s2">"ILPD_clinically_capped.csv"</span>
+<span class="n">scaled_path</span> <span class="o">=</span> <span class="n">PROCESSED_DIR</span> <span class="o">/</span> <span class="s2">"ILPD_robust_scaled_features.csv"</span>
+<span class="n">metadata_path</span> <span class="o">=</span> <span class="n">REPORTS_DIR</span> <span class="o">/</span> <span class="s2">"ILPD_preprocessing_metadata.json"</span>
+
+<span class="n">df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">clean_path</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">capped_df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">capped_path</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">scaled_with_target</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">scaled_path</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+<span class="n">metadata</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"input"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">RAW_PATH</span><span class="p">),</span>
+    <span class="s2">"rows_raw"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">RAW_PATH</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+    <span class="s2">"rows_cleaned"</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+    <span class="s2">"columns"</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">),</span>
+    <span class="s2">"missing_before"</span><span class="p">:</span> <span class="n">missing_before</span><span class="p">,</span>
+    <span class="s2">"missing_after"</span><span class="p">:</span> <span class="n">missing_after</span><span class="p">,</span>
+    <span class="s2">"imputation_strategy"</span><span class="p">:</span> <span class="n">imputation_strategy</span><span class="p">,</span>
+    <span class="s2">"invalid_checks"</span><span class="p">:</span> <span class="n">invalid_checks</span><span class="p">,</span>
+    <span class="s2">"duplicates_removed"</span><span class="p">:</span> <span class="n">duplicates_removed</span><span class="p">,</span>
+    <span class="s2">"outputs"</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">"cleaned"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">clean_path</span><span class="p">),</span>
+        <span class="s2">"clinically_capped"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">capped_path</span><span class="p">),</span>
+        <span class="s2">"robust_scaled_features"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">scaled_path</span><span class="p">),</span>
+    <span class="p">},</span>
+<span class="p">}</span>
+
+<span class="n">metadata_path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">metadata</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">))</span>
 
 <span class="nb">print</span><span class="p">(</span><span class="s2">"Saved:"</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">outlier_report_path</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">FIGURES_DIR</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">clean_path</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">capped_path</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">scaled_path</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">metadata_path</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 </div>
 </div>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=99c88eef">
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>Saved:
+/Users/samyabrataroy/Downloads/Spring_Internship_2026/data/interim/ILPD_cleaned.csv
+/Users/samyabrataroy/Downloads/Spring_Internship_2026/data/processed/ILPD_clinically_capped.csv
+/Users/samyabrataroy/Downloads/Spring_Internship_2026/data/processed/ILPD_robust_scaled_features.csv
+/Users/samyabrataroy/Downloads/Spring_Internship_2026/produced_reports/docs/ILPD_preprocessing_metadata.json
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=e64f9b5f">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7739,20 +8272,20 @@ a.anchor-link {
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=7034cad3">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=e7b12bf5">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In [9]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">subprocess</span>
 
-<span class="n">HTML_DIR</span> <span class="o">=</span> <span class="n">ROOT</span> <span class="o">/</span> <span class="s2">"produced_reports"</span> <span class="o">/</span> <span class="s2">"html"</span>
+<span class="n">HTML_DIR</span> <span class="o">=</span> <span class="n">ROOT</span> <span class="o">/</span> <span class="s2">"produced_reports"</span>
 <span class="n">HTML_DIR</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-<span class="n">NOTEBOOK_PATH</span> <span class="o">=</span> <span class="n">ROOT</span> <span class="o">/</span> <span class="s2">"scripts"</span> <span class="o">/</span> <span class="s2">"outlier_handling.ipynb"</span>
+<span class="n">NOTEBOOK_PATH</span> <span class="o">=</span> <span class="n">ROOT</span> <span class="o">/</span> <span class="s2">"scripts"</span> <span class="o">/</span> <span class="s2">"03_preprocessing_pipeline.ipynb"</span>
 
 <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">([</span>
     <span class="s2">"jupyter"</span><span class="p">,</span> <span class="s2">"nbconvert"</span><span class="p">,</span>
@@ -7763,6 +8296,33 @@ a.anchor-link {
 
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Exported HTML to: </span><span class="si">{</span><span class="n">HTML_DIR</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">NOTEBOOK_PATH</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s1">'.html'</span><span class="p">)</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>[NbConvertApp] Converting notebook /Users/samyabrataroy/Downloads/Spring_Internship_2026/scripts/03_preprocessing_pipeline.ipynb to html
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>Exported HTML to: /Users/samyabrataroy/Downloads/Spring_Internship_2026/produced_reports/03_preprocessing_pipeline.html
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>[NbConvertApp] Writing 306353 bytes to /Users/samyabrataroy/Downloads/Spring_Internship_2026/produced_reports/03_preprocessing_pipeline.html
+</pre>
 </div>
 </div>
 </div>

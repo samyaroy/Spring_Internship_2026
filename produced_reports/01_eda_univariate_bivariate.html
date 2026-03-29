@@ -3,7 +3,7 @@
 <html lang="en">
 <head><meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>eda_univariate_bivariate</title><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js"></script>
+<title>01_eda_univariate_bivariate</title><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js"></script>
 <style type="text/css">
     pre { line-height: 125%; }
 td.linenos .normal { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
@@ -7516,7 +7516,7 @@ a.anchor-link {
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h1 id="Exploratory-Data-Analysis">Exploratory Data Analysis<a class="anchor-link" href="#Exploratory-Data-Analysis">¶</a></h1><p>This notebook is dedicated to univariate and bivariate EDA for the Indian Liver Patient Dataset (ILPD). All generated diagrams are saved under <code>reports/figures/eda/</code>.</p>
+<h1 id="Exploratory-Data-Analysis">Exploratory Data Analysis<a class="anchor-link" href="#Exploratory-Data-Analysis">¶</a></h1><p>This notebook is dedicated to univariate and bivariate EDA for the Indian Liver Patient Dataset (ILPD). All generated diagrams are saved under <code>produced_reports/figures/eda/</code>.</p>
 </div>
 </div>
 </div>
@@ -7548,7 +7548,7 @@ a.anchor-link {
 
 <span class="n">ROOT</span> <span class="o">=</span> <span class="n">resolve_repo_root</span><span class="p">(</span><span class="n">Path</span><span class="o">.</span><span class="n">cwd</span><span class="p">())</span>
 <span class="n">DATA_PATH</span> <span class="o">=</span> <span class="n">ROOT</span> <span class="o">/</span> <span class="s2">"data"</span> <span class="o">/</span> <span class="s2">"raw"</span> <span class="o">/</span> <span class="s2">"ILPD.csv"</span>
-<span class="n">FIGURES_DIR</span> <span class="o">=</span> <span class="n">ROOT</span> <span class="o">/</span> <span class="s2">"reports"</span> <span class="o">/</span> <span class="s2">"figures"</span> <span class="o">/</span> <span class="s2">"eda"</span>
+<span class="n">FIGURES_DIR</span> <span class="o">=</span> <span class="n">ROOT</span> <span class="o">/</span> <span class="s2">"produced_reports"</span> <span class="o">/</span> <span class="s2">"figures"</span> <span class="o">/</span> <span class="s2">"eda"</span>
 <span class="n">UNIVARIATE_DIR</span> <span class="o">=</span> <span class="n">FIGURES_DIR</span> <span class="o">/</span> <span class="s2">"univariate"</span>
 <span class="n">BIVARIATE_DIR</span> <span class="o">=</span> <span class="n">FIGURES_DIR</span> <span class="o">/</span> <span class="s2">"bivariate"</span>
 
@@ -7573,7 +7573,7 @@ a.anchor-link {
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
 <pre>Repository root: /Users/samyabrataroy/Downloads/Spring_Internship_2026
 Data source: /Users/samyabrataroy/Downloads/Spring_Internship_2026/data/raw/ILPD.csv
-EDA figures: /Users/samyabrataroy/Downloads/Spring_Internship_2026/reports/figures/eda
+EDA figures: /Users/samyabrataroy/Downloads/Spring_Internship_2026/produced_reports/figures/eda
 </pre>
 </div>
 </div>
@@ -8326,8 +8326,8 @@ EDA figures: /Users/samyabrataroy/Downloads/Spring_Internship_2026/reports/figur
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
 <h2 id="Output-summary">Output summary<a class="anchor-link" href="#Output-summary">¶</a></h2><p>When you run this notebook, the generated figure set is written to:</p>
 <ul>
-<li><code>reports/figures/eda/univariate/</code></li>
-<li><code>reports/figures/eda/bivariate/</code></li>
+<li><code>produced_reports/figures/eda/univariate/</code></li>
+<li><code>produced_reports/figures/eda/bivariate/</code></li>
 </ul>
 </div>
 </div>
@@ -8343,20 +8343,20 @@ EDA figures: /Users/samyabrataroy/Downloads/Spring_Internship_2026/reports/figur
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=b9259024">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=b9259024">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In [13]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">subprocess</span>
 
-<span class="n">HTML_DIR</span> <span class="o">=</span> <span class="n">ROOT</span> <span class="o">/</span> <span class="s2">"produced_reports"</span> <span class="o">/</span> <span class="s2">"html"</span>
+<span class="n">HTML_DIR</span> <span class="o">=</span> <span class="n">ROOT</span> <span class="o">/</span> <span class="s2">"produced_reports"</span>
 <span class="n">HTML_DIR</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-<span class="n">NOTEBOOK_PATH</span> <span class="o">=</span> <span class="n">ROOT</span> <span class="o">/</span> <span class="s2">"scripts"</span> <span class="o">/</span> <span class="s2">"eda_univariate_bivariate.ipynb"</span>
+<span class="n">NOTEBOOK_PATH</span> <span class="o">=</span> <span class="n">ROOT</span> <span class="o">/</span> <span class="s2">"scripts"</span> <span class="o">/</span> <span class="s2">"01_eda_univariate_bivariate.ipynb"</span>
 
 <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">([</span>
     <span class="s2">"jupyter"</span><span class="p">,</span> <span class="s2">"nbconvert"</span><span class="p">,</span>
@@ -8367,6 +8367,34 @@ EDA figures: /Users/samyabrataroy/Downloads/Spring_Internship_2026/reports/figur
 
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Exported HTML to: </span><span class="si">{</span><span class="n">HTML_DIR</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">NOTEBOOK_PATH</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s1">'.html'</span><span class="p">)</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>[NbConvertApp] Converting notebook /Users/samyabrataroy/Downloads/Spring_Internship_2026/scripts/01_eda_univariate_bivariate.ipynb to html
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>Exported HTML to: /Users/samyabrataroy/Downloads/Spring_Internship_2026/produced_reports/01_eda_univariate_bivariate.html
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="application/vnd.jupyter.stderr" tabindex="0">
+<pre>[NbConvertApp] WARNING | Alternative text is missing on 7 image(s).
+[NbConvertApp] Writing 1317791 bytes to /Users/samyabrataroy/Downloads/Spring_Internship_2026/produced_reports/01_eda_univariate_bivariate.html
+</pre>
 </div>
 </div>
 </div>
