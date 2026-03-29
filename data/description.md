@@ -32,7 +32,7 @@ The clinically bounded version of the cleaned dataset, where implausible extreme
 
 ### `data/processed/ILPD_robust_scaled_features.csv`
 
-The robust-scaled feature dataset prepared for modeling convenience.
+The robust-scaled feature dataset built on top of the clinically capped dataframe prepared for modeling convenience.
 
 ## Workflow Link
 
